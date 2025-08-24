@@ -77,12 +77,12 @@ internal class ScytheAttachment : BaseAttachment
                 return true;
 
             // indoor pot bush
-            if (this.TryHarvestBush(pot?.bush.Value))
+            if (this.TryHarvestBush(player, pot?.bush.Value))
                 return true;
         }
 
         // machine
-        if (this.TryHarvestMachine(tileObj))
+        if (this.TryHarvestMachine(player, tileObj))
             return true;
 
         // grass
@@ -90,7 +90,7 @@ internal class ScytheAttachment : BaseAttachment
             return true;
 
         // tree
-        if (this.TryHarvestTree(tileFeature, tile, tool))
+        if (this.TryHarvestTree(player, tileFeature, tile, tool))
             return true;
 
         // weeds
@@ -102,7 +102,7 @@ internal class ScytheAttachment : BaseAttachment
         if (this.Config.HarvestForage)
         {
             Bush? bush = tileFeature as Bush ?? location.largeTerrainFeatures.FirstOrDefault(p => p.getBoundingBox().Intersects(tileArea)) as Bush;
-            if (this.TryHarvestBush(bush))
+            if (this.TryHarvestBush(player, bush))
                 return true;
         }
 
@@ -187,14 +187,14 @@ internal class ScytheAttachment : BaseAttachment
     /// <summary>Harvest a bush if it's ready.</summary>
     /// <param name="bush">The bush to harvest.</param>
     /// <returns>Returns whether it was harvested.</returns>
-    private bool TryHarvestBush([NotNullWhen(true)] Bush? bush)
+    private bool TryHarvestBush(Farmer player, [NotNullWhen(true)] Bush? bush)
     {
         // harvest if ready
         if (bush?.tileSheetOffset.Value == 1)
         {
             bool isTeaBush = bush.size.Value == Bush.greenTeaBush;
             bool isBerryBush = !isTeaBush && bush.size.Value == Bush.mediumBush && !bush.townBush.Value;
-            if ((isTeaBush && this.Config.HarvestCrops) || (isBerryBush && this.Config.HarvestForage))
+            if ((isTeaBush && this.Config.HarvestCrops) || (isBerryBush && this.Config.HarvestForage) && CheckFuel(player))
             {
                 bush.performUseAction(bush.Tile);
                 return true;
@@ -228,6 +228,8 @@ internal class ScytheAttachment : BaseAttachment
 
             try
             {
+                if (!CheckFuel(player)) return false;
+
                 if (data != null)
                     data.HarvestMethod = HarvestMethod.Scythe; // prevent player from visually stooping off of tractor to grab crop
 
@@ -263,9 +265,9 @@ internal class ScytheAttachment : BaseAttachment
     /// <summary>Try to harvest the output from a machine.</summary>
     /// <param name="machine">The machine to harvest.</param>
     /// <returns>Returns whether it was harvested.</returns>
-    private bool TryHarvestMachine([NotNullWhen(true)] SObject? machine)
+    private bool TryHarvestMachine(Farmer player, [NotNullWhen(true)] SObject? machine)
     {
-        if (this.Config.HarvestMachines && machine != null && machine.readyForHarvest.Value && machine.heldObject.Value != null)
+        if (this.Config.HarvestMachines && machine != null && machine.readyForHarvest.Value && machine.heldObject.Value != null && CheckFuel(player))
         {
             machine.checkForAction(Game1.player);
             return true;
@@ -279,12 +281,12 @@ internal class ScytheAttachment : BaseAttachment
     /// <param name="tile">The tile being harvested.</param>
     /// <param name="scythe">The scythe being used.</param>
     /// <returns>Returns whether it was harvested.</returns>
-    private bool TryHarvestTree([NotNullWhen(true)] TerrainFeature? terrainFeature, Vector2 tile, Tool scythe)
+    private bool TryHarvestTree(Farmer player, [NotNullWhen(true)] TerrainFeature? terrainFeature, Vector2 tile, Tool scythe)
     {
         switch (terrainFeature)
         {
             case FruitTree tree:
-                if (this.Config.HarvestFruitTrees && tree.fruit.Count > 0)
+                if (this.Config.HarvestFruitTrees && tree.fruit.Count > 0 && CheckFuel(player))
                 {
                     tree.performUseAction(tile);
                     return true;
@@ -298,13 +300,13 @@ internal class ScytheAttachment : BaseAttachment
                         ? this.Config.HarvestFruitTrees
                         : this.Config.HarvestTreeSeeds;
 
-                    if (shouldHarvest && tree.performUseAction(tile))
+                    if (shouldHarvest && CheckFuel(player) && tree.performUseAction(tile))
                         return true;
                 }
 
                 if (tree.hasMoss.Value && this.Config.HarvestTreeMoss)
                 {
-                    if (tree.performToolAction(scythe, 0, tile))
+                    if (CheckFuel(player) && tree.performToolAction(scythe, 0, tile))
                         return true;
                 }
                 break;
@@ -322,9 +324,8 @@ internal class ScytheAttachment : BaseAttachment
     /// <returns>Returns whether it was harvested.</returns>
     private bool TryHarvestWeeds([NotNullWhen(true)] SObject? weeds, GameLocation location, Vector2 tile, Farmer player, Tool tool)
     {
-        if (this.Config.ClearWeeds && weeds?.IsWeeds() == true)
+        if (this.Config.ClearWeeds && weeds?.IsWeeds() == true && this.UseToolOnTile(tool, tile, player, location))
         {
-            this.UseToolOnTile(tool, tile, player, location); // doesn't do anything to the weed, but sets up for the tool action (e.g. sets last user)
             weeds.performToolAction(tool); // triggers weed drops, but doesn't remove weed
             location.removeObject(tile, false);
             return true;

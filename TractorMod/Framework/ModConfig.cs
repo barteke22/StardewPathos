@@ -64,6 +64,17 @@ internal class ModConfig
     public bool InvincibleOnTractor { get; set; } = true;
 
 
+    /// <summary>The fuel consumption method. Disabled, PerAction, PerTravel.</summary>
+    public FuelModeType FuelMode { get; set; } = FuelModeType.Disabled;
+
+    /// <summary>Stamina used per Action or tile of Travel. Only applicable if <see cref="FuelMode"/> is NOT set to <see cref="FuelModeType.Disabled"/></summary>
+    public float FuelStamina { get; set; } = 0.25f;
+
+    /// <summary>Stamina used per Action or tile of Travel. Only applicable if <see cref="FuelMode"/> is NOT set to <see cref="FuelModeType.Disabled"/></summary>
+    public float FuelMoney { get; set; } = 0.05f;
+
+
+
     /*********
     ** Public methods
     *********/

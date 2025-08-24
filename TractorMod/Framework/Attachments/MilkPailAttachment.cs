@@ -50,7 +50,7 @@ internal class MilkPailAttachment : BaseAttachment
 
         if (this.TryStartCooldown(tile.ToString(), this.AnimalCheckDelay))
         {
-            FarmAnimal? animal = this.GetBestHarvestableFarmAnimal(milkPail, location, tile);
+            FarmAnimal? animal = this.GetBestHarvestableFarmAnimal(player, milkPail, location, tile);
             if (animal != null)
             {
                 Vector2 useAt = this.GetToolPixelPosition(tile);

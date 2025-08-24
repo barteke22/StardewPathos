@@ -52,7 +52,7 @@ internal class FertilizerAttachment : BaseAttachment
         {
             // tree fertilizer
             case "(O)805":
-                if (tileFeature is Tree tree && !tree.fertilized.Value && tree.growthStage.Value < Tree.treeStage && tree.fertilize())
+                if (tileFeature is Tree tree && !tree.fertilized.Value && tree.growthStage.Value < Tree.treeStage && CheckFuel(player) && tree.fertilize())
                 {
                     this.ConsumeItem(player, item);
                     return true;
@@ -68,6 +68,8 @@ internal class FertilizerAttachment : BaseAttachment
                 // ignore if there's a giant crop, meteorite, etc covering the tile
                 if (dirtCoveredByObj || this.HasResourceClumpCoveringTile(location, tile, this.Reflection))
                     return false;
+
+                if (!CheckFuel(player)) return false;
 
                 // apply fertilizer
                 bool fertilized = dirt.plant(item.ItemId, player, isFertilizer: true);

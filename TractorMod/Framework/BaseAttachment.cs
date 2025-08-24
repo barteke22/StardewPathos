@@ -101,6 +101,120 @@ internal abstract class BaseAttachment : IAttachment
         return false;
     }
 
+
+    public static bool CheckFuel(Farmer player, bool perAction = true)//option for summoning cost??
+    {
+        FuelModeType mode = TractorManager.Config.FuelMode;
+        float staminaCost = TractorManager.Config.FuelStamina;
+        float moneyCost = TractorManager.Config.FuelMoney;
+        float wateringCost =  TractorManager.Config.StandardAttachments.WateringCan.FuelWater;
+
+        bool hasFuel = true;
+
+        if (mode != 0)
+        {
+            if (perAction && mode == FuelModeType.PerAction)
+            {
+                float costMult = 1f;
+                if (player.CurrentTool is Tool tool)
+                {
+                    costMult -= tool.UpgradeLevel * 0.1f;
+                    staminaCost *= costMult;
+                    moneyCost *= costMult;
+                    wateringCost *= costMult;
+                }
+                if (staminaCost != 0f) hasFuel = CheckFuelTry(player.Stamina, 5f, staminaCost);
+                if (moneyCost != 0f) hasFuel &= CheckFuelTry(player.Money, 0f, moneyCost);
+                if (wateringCost != 0f && hasFuel && player.CurrentTool is WateringCan can)
+                {
+                    if (CheckFuelTry(can.WaterLeft, 0f, wateringCost)) can.WaterLeft -= CheckFuelCalc(player, wateringCost);
+                    else hasFuel = false;
+                }
+            }
+            else if (!perAction && mode == FuelModeType.PerTravel)
+            {
+                if (staminaCost != 0f) hasFuel = CheckFuelTry(player.Stamina, 5f, staminaCost);
+                if (moneyCost != 0f) hasFuel &= CheckFuelTry(player.Money, 0f, moneyCost);
+            }
+            else return hasFuel;
+            if (hasFuel)
+            {
+                if (staminaCost != 0f) player.Stamina -= staminaCost;
+                if (moneyCost != 0f) player.Money -= CheckFuelCalc(player, moneyCost);
+            }
+        }
+        return hasFuel;
+    }
+    private static bool CheckFuelTry(float current, float min, float cost)
+    {
+        min += cost;
+        if (current >= min)
+        {
+            return true;
+        }
+        return false;
+    }
+    private static int CheckFuelCalc(Farmer player, float cost)
+    {
+        int full = (int)Math.Truncate(cost);
+        float chance = cost - full;
+        if (chance != 0f && Game1.random.NextDouble() <= chance) full++;
+        return full;
+    }
+    public static bool CheckFuel2(Farmer player, bool perAction = true, bool dismount = true)
+    {
+        int mode = 1;//off, perAct, perMove
+        float moneyCost = 1f;//option for summoning to cost??
+        float staminaCost = 1f;
+
+        bool hasFuel = true;
+
+        if (mode != 0)
+        {
+            if (staminaCost != 0f && player.Stamina < staminaCost + 5f)
+            {
+                if (dismount) player.mount?.dismount();
+                return false;
+            }
+            if (perAction)
+            {
+                if (mode == 1)
+                {
+                    if (moneyCost != 0f)
+                    {
+                        if (player.CurrentItem is Tool tool)
+                        {
+                            moneyCost *= 1f - ((tool.UpgradeLevel - 1) * 0.1f);
+                        }
+                        hasFuel &= CheckFuelInternal2(player, moneyCost, dismount);
+                    }
+                }
+            }
+            else if (mode == 2)
+            {
+                if (moneyCost != 0f) hasFuel &= CheckFuelInternal2(player, moneyCost, dismount);
+            }
+        }
+        return hasFuel;
+    }
+    private static bool CheckFuelInternal2(Farmer player, float cost, bool dismount = true)
+    {
+        if (player.Money < cost)
+        {
+            if (dismount) player.mount?.dismount();
+            return false;
+        }
+        else
+        {
+            int full = (int)Math.Truncate(cost);
+            float chance = cost - full;
+            if (chance != 0f && Game1.random.NextDouble() <= chance) full++;
+            if (full != 0f) player.Money -= full;
+            return true;
+        }
+    }
+
+
     /// <summary>Use a tool on a tile.</summary>
     /// <param name="tool">The tool to use.</param>
     /// <param name="tile">The tile to affect.</param>
@@ -109,6 +223,8 @@ internal abstract class BaseAttachment : IAttachment
     /// <returns>Returns <c>true</c> for convenience when implementing tools.</returns>
     protected bool UseToolOnTile(Tool tool, Vector2 tile, Farmer player, GameLocation location)
     {
+        if (!CheckFuel(player)) return false;
+
         // use tool on center of tile
         this.UpdateToolBeforeUse(tool, tile, player);
         tool.swingTicker++;
@@ -132,6 +248,8 @@ internal abstract class BaseAttachment : IAttachment
     /// <remarks>This is a simplified version of <see cref="MeleeWeapon.DoDamage"/>. This doesn't account for player bonuses (since it's hugely overpowered anyway), doesn't cause particle effects, doesn't trigger animation timers, etc.</remarks>
     protected bool UseWeaponOnTile(MeleeWeapon weapon, Vector2 tile, Farmer player, GameLocation location)
     {
+        if (!CheckFuel(player)) return false;
+
         bool attacked = location.damageMonster(
             areaOfEffect: this.GetAbsoluteTileArea(tile),
             minDamage: weapon.minDamage.Value,
@@ -155,6 +273,8 @@ internal abstract class BaseAttachment : IAttachment
     /// <param name="player">The player for which to trigger an action.</param>
     protected bool CheckTileAction(GameLocation location, Vector2 tile, Farmer player)
     {
+        if (!CheckFuel(player)) return false;
+
         return location.checkAction(new Location((int)tile.X, (int)tile.Y), Game1.viewport, player);
     }
 
@@ -259,7 +379,7 @@ internal abstract class BaseAttachment : IAttachment
     /// <param name="location">The location to check.</param>
     /// <param name="tile">The tile to check.</param>
     /// <remarks>Derived from <see cref="Shears.beginUsing"/> and <see cref="Utility.GetBestHarvestableFarmAnimal"/>.</remarks>
-    protected FarmAnimal? GetBestHarvestableFarmAnimal(Tool tool, GameLocation location, Vector2 tile)
+    protected FarmAnimal? GetBestHarvestableFarmAnimal(Farmer player, Tool tool, GameLocation location, Vector2 tile)
     {
         // get best harvestable animal
         Vector2 useAt = this.GetToolPixelPosition(tile);
@@ -268,7 +388,7 @@ internal abstract class BaseAttachment : IAttachment
             tool: tool,
             toolRect: new Rectangle((int)useAt.X, (int)useAt.Y, Game1.tileSize, Game1.tileSize)
         );
-        if (animal == null || !animal.CanGetProduceWithTool(tool) || !CommonHelper.IsItemId(animal.currentProduce.Value, allowZero: false) || animal.isBaby())
+        if (animal == null || !animal.CanGetProduceWithTool(tool) || !CommonHelper.IsItemId(animal.currentProduce.Value, allowZero: false) || animal.isBaby() || CheckFuel(player))
             return null;
 
         return animal;
@@ -317,11 +437,12 @@ internal abstract class BaseAttachment : IAttachment
     {
         if (tileObj is BreakableContainer)
         {
+            if (!CheckFuel(player)) return false;
             this.UpdateToolBeforeUse(tool, tile, player);
             return tileObj.performToolAction(tool);
         }
 
-        if (tileObj is { TypeDefinitionId: ItemRegistry.type_object, Name: "SupplyCrate" } and not Chest && this.UpdateToolBeforeUse(tool, tile, player) && tileObj.performToolAction(tool))
+        if (tileObj is { TypeDefinitionId: ItemRegistry.type_object, Name: "SupplyCrate" } and not Chest && CheckFuel(player) && this.UpdateToolBeforeUse(tool, tile, player) && tileObj.performToolAction(tool))
         {
             tileObj.performRemoveAction();
             Game1.currentLocation.Objects.Remove(tile);
@@ -357,6 +478,8 @@ internal abstract class BaseAttachment : IAttachment
     {
         if (grass == null || !location.terrainFeatures.ContainsKey(tile))
             return false;
+
+        if (!CheckFuel(player)) return false;
 
         grass.numberOfWeeds.Value = 0; // grass won't drop anything if it thinks it's non-cut
         grass.TryDropItemsOnCut(tool); // need to call this before we remove the grass, since it'll check its location

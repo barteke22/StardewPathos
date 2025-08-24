@@ -51,7 +51,7 @@ internal sealed class TractorManager
     private Dictionary<IAttachment, int> AttachmentCooldowns = [];
 
     /// <summary>The mod settings.</summary>
-    private ModConfig Config;
+    public static ModConfig Config = new(); //made static to access in attachements... alternative: duplicating for every attachment? passing in constructor? idk
 
     /// <summary>The configured key bindings.</summary>
     private ModConfigKeys Keys;
@@ -67,6 +67,8 @@ internal sealed class TractorManager
 
     /// <summary>The tractor location during the last tick.</summary>
     private GameLocation? WasLocation;
+
+    private Vector2 TractorTile = new();
 
     /// <summary>The rider health to maintain if they're invincible.</summary>
     private int RiderHealth;
@@ -91,7 +93,7 @@ internal sealed class TractorManager
     /// <param name="audioManager">Manages audio effects for the tractor.</param>
     public TractorManager(ModConfig config, Func<int> getDistance, ModConfigKeys keys, IReflectionHelper reflection, Func<Texture2D?> getBuffIconTexture, AudioManager audioManager)
     {
-        this.Config = config;
+        Config = config;
         this.GetDistance = getDistance;
         this.Keys = keys;
         this.Reflection = reflection;
@@ -154,7 +156,7 @@ internal sealed class TractorManager
             this.WasRiding = this.IsCurrentPlayerRiding;
 
             // track health for invincibility
-            if (this.Config.InvincibleOnTractor && this.IsCurrentPlayerRiding)
+            if (Config.InvincibleOnTractor && this.IsCurrentPlayerRiding)
                 this.RiderHealth = Game1.player.health;
 
             // reset held-down tool power
@@ -162,7 +164,7 @@ internal sealed class TractorManager
 
             // set sound
             if (Game1.player.mount != null)
-                SetTractorInfo(Game1.player.mount, this.Config.SoundEffects);
+                SetTractorInfo(Game1.player.mount, Config.SoundEffects);
             this.AudioManager.SetEngineState(this.IsCurrentPlayerRiding ? EngineState.Idle : EngineState.Stop);
         }
 
@@ -186,7 +188,7 @@ internal sealed class TractorManager
         if (this.IsCurrentPlayerRiding && Game1.activeClickableMenu == null)
         {
             // apply invincibility
-            if (this.Config.InvincibleOnTractor)
+            if (Config.InvincibleOnTractor)
             {
                 if (Game1.player.health > this.RiderHealth)
                     this.RiderHealth = Game1.player.health;
@@ -243,7 +245,7 @@ internal sealed class TractorManager
     public void UpdateConfig(ModConfig config, ModConfigKeys keys, IAttachment[] attachments)
     {
         // update config
-        this.Config = config;
+        Config = config;
         this.Keys = keys;
         this.Attachments = attachments;
         this.AttachmentCooldowns = this.Attachments.Where(p => p.RateLimit > this.TicksPerAction).ToDictionary(p => p, _ => 0);
@@ -283,7 +285,7 @@ internal sealed class TractorManager
 
         // else reapply if expired or expiring
         Game1.player.buffs.AppliedBuffs.TryGetValue(this.BuffUniqueID, out Buff? buff);
-        if (buff == null || buff.millisecondsDuration < 5000 || buff.effects.MagneticRadius.Value != this.Config.MagneticRadius || buff.effects.Speed.Value != this.Config.TractorSpeed)
+        if (buff == null || buff.millisecondsDuration < 5000 || buff.effects.MagneticRadius.Value != Config.MagneticRadius || buff.effects.Speed.Value != Config.TractorSpeed)
         {
             buff = new Buff(
                 id: this.BuffUniqueID,
@@ -294,8 +296,8 @@ internal sealed class TractorManager
                 iconSheetIndex: 0,
                 effects: new StardewValley.Buffs.BuffEffects()
                 {
-                    MagneticRadius = { this.Config.MagneticRadius },
-                    Speed = { this.Config.TractorSpeed }
+                    MagneticRadius = { Config.MagneticRadius },
+                    Speed = { Config.TractorSpeed }
                 }
             );
             Game1.player.applyBuff(buff);
@@ -334,7 +336,7 @@ internal sealed class TractorManager
         bool? wasToolSoundEnabled = tool?.PlayUseSounds;
 
         // get tool use sound limit
-        ToolUseSoundLimit toolUseLimit = this.Config.ToolUseSoundLimit;
+        ToolUseSoundLimit toolUseLimit = Config.ToolUseSoundLimit;
         if (toolUseLimit is ToolUseSoundLimit.Default)
             toolUseLimit = ToolUseSoundLimit.OncePerTick;
 
@@ -469,6 +471,7 @@ internal sealed class TractorManager
         int waterInCan = wateringCan?.WaterLeft ?? 0;
         float stamina = player.stamina;
         Vector2 position = player.Position;
+        Vector2 tile = player.Tile;
         int facingDirection = player.FacingDirection;
         int currentToolIndex = player.CurrentToolIndex;
         bool canMove = player.canMove; // fix player frozen due to animations when performing an action
@@ -476,6 +479,11 @@ internal sealed class TractorManager
         // move mount out of the way
         mountFieldValue.SetValue(null);
         mountPositionValue.SetValue(new Vector2(-5, -5));
+
+
+        FuelModeType mode = Config.FuelMode;   //option for summoning to cost??
+        float staminaCost = Config.FuelStamina;
+        float wateringCost = Config.StandardAttachments.WateringCan.FuelWater;
 
         // perform action
         try
@@ -489,9 +497,26 @@ internal sealed class TractorManager
             mountFieldValue.SetValue(mount);
 
             // restore previous state
-            if (wateringCan != null)
-                wateringCan.WaterLeft = waterInCan;
-            player.stamina = stamina;
+            if (wateringCan != null && wateringCost == 0f) wateringCan.WaterLeft = waterInCan;
+
+            if (mode != FuelModeType.PerAction)
+            {
+                player.stamina = stamina;
+            }
+            if (mode == FuelModeType.PerAction)
+            {
+                if (staminaCost != 0f && player.stamina != stamina)
+                {
+                    staminaCost *= stamina - player.stamina;
+                    player.stamina = stamina - staminaCost;
+                }
+            }
+            else if (mode == FuelModeType.PerTravel && (this.TractorTile.X != tile.X || this.TractorTile.Y != tile.Y))
+            {
+                this.TractorTile = tile;
+                BaseAttachment.CheckFuel(player, false);
+            }
+
             player.Position = position;
             player.FacingDirection = facingDirection;
             player.CurrentToolIndex = currentToolIndex;

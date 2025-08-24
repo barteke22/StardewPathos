@@ -14,6 +14,7 @@
     ** Section titles
     ****/
     "config.main-options": "Main Options",
+    "config.fuel": "Fuel",
     "config.audio": "Audio",
     "config.controls": "Controls",
     "config.axe": "Axe Features",
@@ -59,6 +60,19 @@
 
     "config.highlight-radius.name": "Highlight Radius (Debug)",
     "config.highlight-radius.tooltip": "Whether to highlight the tractor radius when riding one, to help visualize the distance option.",
+
+    "config.fuel-mode.name": "Fuel Mode",
+    "config.fuel-mode.tooltip": ".",
+    "config.fuel-mode.value.Disabled": "Disabled",
+    "config.fuel-mode.value.PerAction": "Per Action",
+    "config.fuel-mode.value.PerTravel": "Per Travel",
+
+    "config.fuel-type.stamina.name": "Stamina Cost",
+    "config.fuel-type.stamina.tooltip": ". Disabled when 0. Default {{defaultValue}}",
+    "config.fuel-type.money.name": "Money Cost",
+    "config.fuel-type.money.tooltip": ". Disabled when 0. Default {{defaultValue}}",
+    "config.fuel-type.water.name": "Water Cost",
+    "config.fuel-type.water.tooltip": ". Only in PerAction Fuel Mode. Disabled when 0. Default {{defaultValue}}",
 
 
     /****

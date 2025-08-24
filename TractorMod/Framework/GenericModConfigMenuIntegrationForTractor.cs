@@ -96,6 +96,44 @@ internal class GenericModConfigMenuIntegrationForTractor : IGenericModConfigMenu
                 set: (config, value) => config.HighlightRadius = value
             )
 
+            // fuel options
+            .AddSectionTitle(I18n.Config_Fuel)
+            .AddDropdown(
+                name: I18n.Config_FuelMode_Name,
+                tooltip: I18n.Config_FuelMode_Tooltip,
+                formatAllowedValue: value => I18n.GetByKey($"config.fuel-mode.value.{value}"),
+                allowedValues: Enum.GetNames<FuelModeType>(),
+                get: config => config.FuelMode.ToString(),
+                set: (config, value) => config.FuelMode = Enum.Parse<FuelModeType>(value)
+            )
+            .AddNumberField(
+                name: I18n.Config_FuelType_Stamina_Name,
+                tooltip: () => I18n.Config_FuelType_Stamina_Tooltip(defaultValue: defaultConfig.FuelStamina),
+                get: config => config.FuelStamina,
+                set: (config, value) => config.FuelStamina = value,
+                min: 0,
+                interval: 0.01f,
+                max: 2
+            )
+            .AddNumberField(
+                name: I18n.Config_FuelType_Money_Name,
+                tooltip: () => I18n.Config_FuelType_Money_Tooltip(defaultValue: defaultConfig.FuelMoney),
+                get: config => config.FuelMoney,
+                set: (config, value) => config.FuelMoney = value,
+                min: 0,
+                interval: 0.01f,
+                max: 5
+            )
+            .AddNumberField(
+                name: I18n.Config_FuelType_Water_Name,
+                tooltip: () => I18n.Config_FuelType_Water_Tooltip(defaultValue: defaultConfig.StandardAttachments.WateringCan.FuelWater),
+                get: config => config.StandardAttachments.WateringCan.FuelWater,
+                set: (config, value) => config.StandardAttachments.WateringCan.FuelWater = value,
+                min: 0,
+                interval: 0.01f,
+                max: 2
+            )
+
             // audio
             .AddSectionTitle(I18n.Config_Audio)
             .AddDropdown(

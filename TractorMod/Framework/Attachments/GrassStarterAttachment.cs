@@ -43,7 +43,7 @@ internal class GrassStarterAttachment : BaseAttachment
         if (item is not SObject obj || obj.Stack <= 0)
             return false;
 
-        if (obj.canBePlacedHere(location, tile) && obj.placementAction(location, (int)(tile.X * Game1.tileSize), (int)(tile.Y * Game1.tileSize), player))
+        if (obj.canBePlacedHere(location, tile) && CheckFuel(player) && obj.placementAction(location, (int)(tile.X * Game1.tileSize), (int)(tile.Y * Game1.tileSize), player))
         {
             this.ConsumeItem(player, item);
             return true;

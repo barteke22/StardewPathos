@@ -16,7 +16,7 @@ internal class WateringCanAttachment : BaseAttachment
     ** Fields
     *********/
     /// <summary>The attachment settings.</summary>
-    private readonly GenericAttachmentConfig Config;
+    private readonly WateringCanConfig Config;
 
     /// <summary>An infinite watering can to apply.</summary>
     private readonly WateringCan WateringCan = new()
@@ -33,7 +33,7 @@ internal class WateringCanAttachment : BaseAttachment
     /// <summary>Construct an instance.</summary>
     /// <param name="config">The attachment settings.</param>
     /// <param name="modRegistry">Fetches metadata about loaded mods.</param>
-    public WateringCanAttachment(GenericAttachmentConfig config, IModRegistry modRegistry)
+    public WateringCanAttachment(WateringCanConfig config, IModRegistry modRegistry)
         : base(modRegistry)
     {
         this.Config = config;
@@ -42,7 +42,7 @@ internal class WateringCanAttachment : BaseAttachment
     /// <inheritdoc />
     public override bool IsEnabled(Farmer player, Tool? tool, Item? item, GameLocation location)
     {
-        return
+        return 
             this.Config.Enable
             && tool is WateringCan;
     }
@@ -51,6 +51,10 @@ internal class WateringCanAttachment : BaseAttachment
     /// <remarks>Volcano logic derived from <see cref="VolcanoDungeon.performToolAction"/>.</remarks>
     public override bool Apply(Vector2 tile, SObject? tileObj, TerrainFeature? tileFeature, Farmer player, Tool? tool, Item? item, GameLocation location)
     {
+        //refill can
+        if (this.Config.FuelWater != 0f && tool is WateringCan can && location.CanRefillWateringCanOnTile((int)tile.X, (int)tile.Y))
+            can.WaterLeft = can.waterCanMax;
+
         // water dirt
         if (this.TryGetHoeDirt(tileFeature, tileObj, out HoeDirt? dirt, out _, out _) && dirt.state.Value != HoeDirt.watered)
             return this.UseWateringCanOnTile(tile, player, location);

@@ -61,7 +61,7 @@ internal class HoeAttachment : BaseAttachment
             return this.UseToolOnTile(tool, tile, player, location);
 
         // harvest ginger
-        if (this.Config.HarvestGinger && tileFeature is HoeDirt dirt && dirt.crop?.whichForageCrop.Value == Crop.forageCrop_ginger.ToString() && dirt.crop.hitWithHoe((int)tile.X, (int)tile.Y, location, dirt))
+        if (this.Config.HarvestGinger && tileFeature is HoeDirt dirt && dirt.crop?.whichForageCrop.Value == Crop.forageCrop_ginger.ToString() && CheckFuel(player) && dirt.crop.hitWithHoe((int)tile.X, (int)tile.Y, location, dirt))
         {
             dirt.destroyCrop(showAnimation: false);
             return true;

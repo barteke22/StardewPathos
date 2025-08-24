@@ -47,7 +47,7 @@ internal class StandardAttachmentsConfig
     public GenericAttachmentConfig Slingshot { get; set; } = new() { Enable = false };
 
     /// <summary>Configuration for the watering can attachment.</summary>
-    public GenericAttachmentConfig WateringCan { get; set; } = new();
+    public WateringCanConfig WateringCan { get; set; } = new();
 
     /// <summary>Configuration for the Seed Bag mod attachment.</summary>
     public GenericAttachmentConfig SeedBagMod { get; set; } = new();
@@ -76,7 +76,7 @@ internal class StandardAttachmentsConfig
         this.Seeds ??= new GenericAttachmentConfig();
         this.Shears ??= new GenericAttachmentConfig();
         this.Slingshot ??= new GenericAttachmentConfig { Enable = false };
-        this.WateringCan ??= new GenericAttachmentConfig();
+        this.WateringCan ??= new WateringCanConfig();
         this.SeedBagMod ??= new GenericAttachmentConfig();
     }
 }

@@ -50,7 +50,7 @@ internal class ShearsAttachment : BaseAttachment
 
         if (this.TryStartCooldown(tile.ToString(), this.AnimalCheckDelay))
         {
-            FarmAnimal? animal = this.GetBestHarvestableFarmAnimal(shears, location, tile);
+            FarmAnimal? animal = this.GetBestHarvestableFarmAnimal(player, shears, location, tile);
             if (animal != null)
             {
                 Vector2 useAt = this.GetToolPixelPosition(tile);

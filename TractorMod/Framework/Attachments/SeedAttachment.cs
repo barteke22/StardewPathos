@@ -59,6 +59,8 @@ internal class SeedAttachment : BaseAttachment
         if (dirtCoveredByObj || this.HasResourceClumpCoveringTile(location, tile, this.Reflection))
             return false;
 
+        if (!CheckFuel(player)) return false;
+
         // sow seeds
         bool sowed = dirt.plant(item.ItemId, player, false);
         if (sowed)
